@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # Base de datos MongoDB SIN autenticación para empezar
+  mongodb:
+    image: mongo:6.0
+    container_name: velas_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - velas_network
+
+  # Interfaz web para MongoDB
+  mongo-express:
+    image: mongo-express
+    container_name: velas_mongo_express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_BASICAUTH: false
+    depends_on:
+      - mongodb
+    networks:
+      - velas_network
+
+volumes:
+  mongodb_data:
+
+networks:
+  velas_network:
+    driver: bridge
