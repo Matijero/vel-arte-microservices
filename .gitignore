@@ -1,0 +1,68 @@
+# Environment files
+.env
+*.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.pid
+
+# Frontend
+node_modules/
+build/
+dist/
+.cache/
+*.local
+
+# Databases
+*.db
+*.sqlite3
+
+# Secrets and certificates
+*.pem
+*.key
+*.crt
+*.csr
+
+# Backups
+*.bak
+*.backup
+*.old
+
+# Temp files
+tmp/
+temp/
