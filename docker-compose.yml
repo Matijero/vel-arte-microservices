@@ -1,0 +1,104 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: vel_arte_mongodb
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: vel_arte_db
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - vel_arte_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  auth-service:
+    build: ./auth-service
+    container_name: vel_arte_auth
+    ports:
+      - "8001:8000"
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/vel_arte_db?authSource=admin
+    networks:
+      - vel_arte_network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  product-service:
+    build: ./product-service
+    container_name: vel_arte_products
+    ports:
+      - "8002:8001"
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/vel_arte_db?authSource=admin
+    networks:
+      - vel_arte_network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  business-rules-service:
+    build: ./business-rules-service
+    container_name: vel_arte_business_rules
+    ports:
+      - "8003:8003"
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/vel_arte_db?authSource=admin
+    networks:
+      - vel_arte_network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: vel_arte_gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      - PRODUCT_SERVICE_URL=http://product-service:8001
+      - BUSINESS_RULES_SERVICE_URL=http://business-rules-service:8003
+    networks:
+      - vel_arte_network
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      business-rules-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mongodb_data:
+
+networks:
+  vel_arte_network:
+    driver: bridge

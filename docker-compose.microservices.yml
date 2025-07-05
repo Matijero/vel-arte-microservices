@@ -1,0 +1,130 @@
+version: '3.8'
+
+services:
+  # 🍃 Base de datos MongoDB
+  mongodb:
+    image: mongo:6
+    container_name: vel_arte_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password123
+      - MONGO_INITDB_DATABASE=vel_arte
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - microservices_network
+
+  # 🔐 Servicio de Autenticación
+  auth-service:
+    build: 
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: vel_arte_auth
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/vel_arte_auth?authSource=admin
+      - SECRET_KEY=vel_arte_super_secret_key_2024
+    depends_on:
+      - mongodb
+    networks:
+      - microservices_network
+
+  # 📦 Servicio de Productos
+  product-service:
+    build: 
+      context: ./product-service
+      dockerfile: Dockerfile
+    container_name: vel_arte_products
+    restart: unless-stopped
+    ports:
+      - "8002:8000"
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/vel_arte_products?authSource=admin
+      - AUTH_SERVICE_URL=http://auth-service:8000
+    depends_on:
+      - mongodb
+      - auth-service
+    networks:
+      - microservices_network
+
+  # 📊 Servicio de Inventario
+  inventory-service:
+    build: 
+      context: ./inventory-service
+      dockerfile: Dockerfile
+    container_name: vel_arte_inventory
+    restart: unless-stopped
+    ports:
+      - "8003:8000"
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/vel_arte_inventory?authSource=admin
+    depends_on:
+      - mongodb
+    networks:
+      - microservices_network
+
+  # 💰 Servicio de Precios
+  pricing-service:
+    build: 
+      context: ./pricing-service
+      dockerfile: Dockerfile
+    container_name: vel_arte_pricing
+    restart: unless-stopped
+    ports:
+      - "8004:8000"
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/vel_arte_pricing?authSource=admin
+    depends_on:
+      - mongodb
+    networks:
+      - microservices_network
+
+  # 🌐 API Gateway
+  api-gateway:
+    build: 
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: vel_arte_gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"  # Puerto principal
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      - PRODUCT_SERVICE_URL=http://product-service:8000
+      - INVENTORY_SERVICE_URL=http://inventory-service:8000
+      - PRICING_SERVICE_URL=http://pricing-service:8000
+    depends_on:
+      - auth-service
+      - product-service
+      - inventory-service
+      - pricing-service
+    networks:
+      - microservices_network
+
+  # 📊 Mongo Express (UI Admin)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: vel_arte_mongo_ui
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=password123
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:password123@mongodb:27017/
+    depends_on:
+      - mongodb
+    networks:
+      - microservices_network
+
+volumes:
+  mongodb_data:
+
+networks:
+  microservices_network:
+    driver: bridge
